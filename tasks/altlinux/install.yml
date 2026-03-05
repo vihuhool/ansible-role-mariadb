@@ -1,0 +1,56 @@
+---
+- name: Use override dependency packages if provided (ALT)
+  ansible.builtin.set_fact:
+    _mariadb_dependency_pkg_list: "{{ mariadb_dependencies_packages }}"
+  when: mariadb_dependencies_packages is defined
+
+- name: Check dependency package availability (ALT)
+  ansible.builtin.command: "apt-cache show {{ item }}"
+  register: _mariadb_dep_check
+  changed_when: false
+  failed_when: false
+  loop: "{{ _mariadb_dependency_package_candidates }}"
+  loop_control:
+    label: "{{ item }}"
+  when: mariadb_dependencies_packages is not defined
+
+- name: Select first available dependency package (ALT)
+  ansible.builtin.set_fact:
+    _mariadb_dependency_pkg: >-
+      {{ _mariadb_dep_check.results
+      | selectattr('rc', 'eq', 0)
+      | map(attribute='item')
+      | list
+      | first
+      | default('', true) }}
+  when: mariadb_dependencies_packages is not defined
+
+- name: Set dependency package list (ALT)
+  ansible.builtin.set_fact:
+    _mariadb_dependency_pkg_list: >-
+      {{ [_mariadb_dependency_pkg] if _mariadb_dependency_pkg != '' else [] }}
+  when: mariadb_dependencies_packages is not defined
+
+- name: Fail if dependency package was not found (ALT)
+  ansible.builtin.fail:
+    msg: >-
+      No PyMySQL package found for ALT Linux.
+      Set mariadb_dependencies_packages to the correct package name.
+  when:
+    - mariadb_dependencies_packages is not defined
+    - _mariadb_dependency_pkg_list | length == 0
+
+- name: Install MariaDB dependency packages (ALT)
+  community.general.apt_rpm:
+    name: "{{ _mariadb_dependency_pkg_list }}"
+    state: present_not_latest
+    update_cache: true
+  environment: "{{ _mariadb_pkg_proxy_env }}"
+  when: _mariadb_dependency_pkg_list | length > 0
+
+- name: Install MariaDB packages (ALT)
+  community.general.apt_rpm:
+    name: "{{ _mariadb_packages + mariadb_packages_extra }}"
+    state: present_not_latest
+    update_cache: true
+  environment: "{{ _mariadb_pkg_proxy_env }}"

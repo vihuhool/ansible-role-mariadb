@@ -1,6 +1,6 @@
 ---
 - name: "Include tasks for install in {{ _ansible_os_family }}"
-  ansible.builtin.include_tasks: "{{ _ansible_os_family }}/install.yml"
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/{{ _ansible_os_family }}/install.yml"
 
 - name: Include {{ ansible_pkg_mgr + '/install.yml' }}
   ansible.builtin.include_tasks: "{{ item }}"
@@ -9,6 +9,8 @@
     params:
       files:
         - "{{ ansible_pkg_mgr }}/install.yml"
+      paths:
+        - "{{ role_path }}/tasks"
       skip: true
 
 - name: Install pip dependencies (externally managed environments are also supported)
