@@ -75,18 +75,25 @@
   no_log: "{{ not mariadb_debug }}"
   when: _mariadb_users_absent | length > 0
 
+- name: Build absent users with host lists
+  ansible.builtin.set_fact:
+    _mariadb_absent_hosts_flat: >-
+      {% set out = [] -%}
+      {% for r in _mariadb_absent_hosts.results | default([]) -%}
+      {%   set hosts = (r.query_result | default([]) | first | default([])) -%}
+      {%   set _ = out.append({'name': r.item.name, 'hosts': hosts}) -%}
+      {% endfor -%}
+      {{ out }}
+  when: _mariadb_users_absent | length > 0
+
 - name: Build absent user host pairs
   ansible.builtin.set_fact:
     _mariadb_absent_user_host_pairs: >-
       {{ (_mariadb_absent_user_host_pairs | d([])) + [{
-        'name': item.0.item.name,
+        'name': item.0.name,
         'host': (item.1.Host | d(item.1.HOST | d('')))
       }] }}
-  loop: >-
-    {{ _mariadb_absent_hosts.results
-    | selectattr('query_result', 'defined')
-    | list
-    | subelements('query_result.0', skip_missing=true) }}
+  loop: "{{ _mariadb_absent_hosts_flat | d([]) | subelements('hosts', skip_missing=true) }}"
   when:
     - _mariadb_users_absent | length > 0
     - (item.1.Host | d(item.1.HOST | d(''))) | length > 0
