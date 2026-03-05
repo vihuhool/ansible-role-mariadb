@@ -74,10 +74,26 @@
   no_log: "{{ not mariadb_debug }}"
   when: _mariadb_users_absent | length > 0
 
+- name: Build absent user host pairs
+  ansible.builtin.set_fact:
+    _mariadb_absent_user_host_pairs: >-
+      {{ (_mariadb_absent_user_host_pairs | d([])) + [{
+        'name': item.0.item.name,
+        'host': (item.1.Host | d(item.1.HOST | d('')))
+      }] }}
+  loop: >-
+    {{ _mariadb_absent_hosts.results
+    | selectattr('query_result', 'defined')
+    | list
+    | subelements('query_result.0', skip_missing=true) }}
+  when:
+    - _mariadb_users_absent | length > 0
+    - (item.1.Host | d(item.1.HOST | d(''))) | length > 0
+
 - name: Remove MariaDB users (absent)
   community.mysql.mysql_user:
-    name: "{{ item.0.item.name }}"
-    host: "{{ item.1.Host }}"
+    name: "{{ item.name }}"
+    host: "{{ item.host }}"
     state: absent
     login_unix_socket: "{{ _mariadb_socket }}"
     login_user: "{{ mariadb_admin_user }}"
@@ -85,13 +101,11 @@
       {{ _mariadb_root_login_password
       if _mariadb_root_login_password | length > 0 else omit }}
     config_file: /dev/null
-  loop: >-
-    {{ _mariadb_absent_hosts.results
-    | selectattr('query_result', 'defined')
-    | list
-    | subelements('query_result.0') }}
+  loop: "{{ _mariadb_absent_user_host_pairs | d([]) }}"
   no_log: "{{ not mariadb_debug }}"
-  when: _mariadb_users_absent | length > 0
+  when:
+    - _mariadb_users_absent | length > 0
+    - _mariadb_absent_user_host_pairs is defined
 
 - name: Copy my.cnf file for users
   ansible.builtin.template:
