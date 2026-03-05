@@ -189,7 +189,6 @@
       {{ _mariadb_root_login_password
       if _mariadb_root_login_password | length > 0 else omit }}
     config_file: /dev/null
-    column_case_sensitive: true
     query: "SELECT plugin FROM mysql.user WHERE User=%s AND Host='localhost' LIMIT 1"
     positional_args:
       - "{{ mariadb_admin_user }}"
