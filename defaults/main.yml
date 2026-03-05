@@ -41,6 +41,8 @@ mariadb_admin_home: '/root'
 mariadb_admin_user: 'root'
 # Mariadb admin user password
 mariadb_admin_password: ''
+# Optional current password for admin user (used for password rotation)
+mariadb_admin_login_password: ''
 # Update the admin password ?
 mariadb_admin_force_password_update: true
 
