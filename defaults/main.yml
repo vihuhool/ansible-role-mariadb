@@ -222,6 +222,9 @@ mariadb_systemd_override:
       LimitNOFILE: 100000
       LimitMEMLOCK: 100000
 
+# Disable unix_socket authentication for root (if enabled by the distro)
+mariadb_disable_unix_socket_auth: false
+
 
 # Backup related variables (using the script automysqlbackup from https://sourceforge.net/projects/automysqlbackup/)
 # Whether or not to run backup tasks (will not remove backup if already planned)

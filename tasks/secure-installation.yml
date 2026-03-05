@@ -119,6 +119,40 @@
     var: _mariadb_root_password_update
   when: mariadb_debug
 
+- name: Check root auth plugin
+  community.mysql.mysql_query:
+    login_db: "mysql"
+    login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: >-
+      {{ _mariadb_root_login_password
+      if _mariadb_root_login_password | length > 0 else omit }}
+    config_file: /dev/null
+    query: "SELECT plugin FROM mysql.user WHERE User=%s AND Host='localhost' LIMIT 1"
+    positional_args:
+      - "{{ mariadb_admin_user }}"
+  register: _mariadb_root_plugin
+  when:
+    - mariadb_disable_unix_socket_auth | bool
+
+- name: Disable unix_socket auth for root
+  community.mysql.mysql_query:
+    login_db: "mysql"
+    login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: >-
+      {{ _mariadb_root_login_password
+      if _mariadb_root_login_password | length > 0 else omit }}
+    config_file: /dev/null
+    query: >-
+      ALTER USER '{{ mariadb_admin_user }}'@'localhost'
+      IDENTIFIED BY '{{ mariadb_admin_password | replace("'", "''") }}';
+  when:
+    - mariadb_disable_unix_socket_auth | bool
+    - _mariadb_root_plugin.query_result | length > 0
+    - (_mariadb_root_plugin.query_result[0] | length) > 0
+    - _mariadb_root_plugin.query_result[0][0].plugin == 'unix_socket'
+
 - name: Copy .my.cnf file with root password credentials.
   ansible.builtin.template:
     src: "root-my.cnf.j2"
