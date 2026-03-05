@@ -15,10 +15,16 @@
 
 - name: Split MariaDB users by state
   ansible.builtin.set_fact:
+    _mariadb_users_normalized: >-
+      {{ _mariadb_users | d([])
+      | map('combine', {'state': 'present'})
+      | list }}
     _mariadb_users_present: >-
-      {{ _mariadb_users | d([]) | rejectattr('state', 'equalto', 'absent') | list }}
+      {{ _mariadb_users_normalized
+      | rejectattr('state', 'equalto', 'absent') | list }}
     _mariadb_users_absent: >-
-      {{ _mariadb_users | d([]) | selectattr('state', 'equalto', 'absent') | list }}
+      {{ _mariadb_users_normalized
+      | selectattr('state', 'equalto', 'absent') | list }}
 
 - name: "Show _mariadb_hosts_patch, _mariadb_users"
   ansible.builtin.debug:
