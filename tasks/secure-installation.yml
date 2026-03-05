@@ -4,15 +4,6 @@
     name: "{{ _mariadb_daemon }}"
     state: started
 
-- name: Copy .my.cnf file with root password credentials.
-  ansible.builtin.template:
-    src: "root-my.cnf.j2"
-    dest: "{{ mariadb_admin_home }}/.my.cnf"
-    owner: root
-    group: root
-    mode: 0600
-  when: mariadb_admin_force_password_update
-
 - name: Get list of hosts for the anonymous user.
   community.mysql.mysql_query:
     login_db: "mysql"
@@ -70,6 +61,15 @@
   ansible.builtin.debug:
     var: _mariadb_root_password_update
   when: mariadb_debug
+
+- name: Copy .my.cnf file with root password credentials.
+  ansible.builtin.template:
+    src: "root-my.cnf.j2"
+    dest: "{{ mariadb_admin_home }}/.my.cnf"
+    owner: root
+    group: root
+    mode: 0600
+  when: mariadb_admin_force_password_update
 
 - name: Remove MariaDB test database.
   community.mysql.mysql_db:
