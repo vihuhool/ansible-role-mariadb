@@ -189,12 +189,23 @@
       {{ _mariadb_root_login_password
       if _mariadb_root_login_password | length > 0 else omit }}
     config_file: /dev/null
+    column_case_sensitive: true
     query: "SELECT plugin FROM mysql.user WHERE User=%s AND Host='localhost' LIMIT 1"
     positional_args:
       - "{{ mariadb_admin_user }}"
   register: _mariadb_root_plugin
   when:
     - mariadb_disable_unix_socket_auth | bool
+
+- name: Set root auth plugin fact
+  ansible.builtin.set_fact:
+    _mariadb_root_plugin_name: >-
+      {{ _mariadb_root_plugin.query_result[0][0].plugin
+      | default('', true) | lower }}
+  when:
+    - mariadb_disable_unix_socket_auth | bool
+    - _mariadb_root_plugin.query_result | length > 0
+    - _mariadb_root_plugin.query_result[0] | length > 0
 
 - name: Disable unix_socket auth for root
   community.mysql.mysql_query:
@@ -210,9 +221,15 @@
       IDENTIFIED BY '{{ mariadb_admin_password | replace("'", "''") }}';
   when:
     - mariadb_disable_unix_socket_auth | bool
-    - _mariadb_root_plugin.query_result | length > 0
-    - (_mariadb_root_plugin.query_result[0] | length) > 0
-    - _mariadb_root_plugin.query_result[0][0].plugin == 'unix_socket'
+    - _mariadb_root_plugin_name | default('') in ['unix_socket', 'auth_socket']
+
+- name: Ensure root .my.cnf is absent when disabled
+  ansible.builtin.file:
+    path: "{{ mariadb_admin_home }}/.my.cnf"
+    state: absent
+  when:
+    - mariadb_admin_remove_mycnf | bool
+    - not mariadb_admin_create_mycnf | bool
 
 - name: Copy .my.cnf file with root password credentials.
   ansible.builtin.template:
@@ -221,7 +238,26 @@
     owner: root
     group: root
     mode: 0600
-  when: mariadb_admin_force_password_update
+  when:
+    - mariadb_admin_force_password_update
+    - mariadb_admin_create_mycnf | bool
+
+- name: Create dedicated admin user
+  community.mysql.mysql_user:
+    name: "{{ mariadb_admin_create_user_name }}"
+    host: "{{ mariadb_admin_create_user_host }}"
+    password: "{{ mariadb_admin_create_user_password }}"
+    priv: "{{ mariadb_admin_create_user_priv }}"
+    state: present
+    login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: >-
+      {{ _mariadb_root_login_password
+      if _mariadb_root_login_password | length > 0 else omit }}
+    config_file: /dev/null
+  when:
+    - mariadb_admin_create_user | bool
+    - mariadb_admin_create_user_password | length > 0
 
 - name: Remove MariaDB test database.
   community.mysql.mysql_db:

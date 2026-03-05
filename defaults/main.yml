@@ -43,6 +43,17 @@ mariadb_admin_user: 'root'
 mariadb_admin_password: ''
 # Optional current password for admin user (used for password rotation)
 mariadb_admin_login_password: ''
+# Create /root/.my.cnf with admin credentials
+mariadb_admin_create_mycnf: false
+# Remove /root/.my.cnf when not creating it
+mariadb_admin_remove_mycnf: true
+
+# Create a dedicated admin user (non-root)
+mariadb_admin_create_user: true
+mariadb_admin_create_user_name: "db_admin"
+mariadb_admin_create_user_password: ""
+mariadb_admin_create_user_host: "localhost"
+mariadb_admin_create_user_priv: "*.*:ALL,GRANT"
 # Update the admin password ?
 mariadb_admin_force_password_update: true
 
