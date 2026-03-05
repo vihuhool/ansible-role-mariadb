@@ -1,12 +1,24 @@
 ---
 - name: Create users default hosts patch variable
   ansible.builtin.set_fact:
-    _mariadb_hosts_patch: "{{ (_mariadb_hosts_patch | d([])) + [{'name': item.name, 'hosts': [item.host | d(mariadb_users_default_host) | d('localhost', true)]}] }}"
+    _mariadb_hosts_patch: >-
+      {{ (_mariadb_hosts_patch | d([])) + [{
+        'name': item.name,
+        'hosts': item.hosts | d([item.host
+          | d(mariadb_users_default_host) | d('localhost', true)])
+      }] }}
   loop: "{{ mariadb_users }}"
 
 - name: Patch _mariadb_users to include default hosts
   ansible.builtin.set_fact:
     _mariadb_users: "{{ [mariadb_users, _mariadb_hosts_patch | d([])] | community.general.lists_mergeby('name', recursive=true, list_merge='keep') }}"
+
+- name: Split MariaDB users by state
+  ansible.builtin.set_fact:
+    _mariadb_users_present: >-
+      {{ _mariadb_users | d([]) | rejectattr('state', 'equalto', 'absent') | list }}
+    _mariadb_users_absent: >-
+      {{ _mariadb_users | d([]) | selectattr('state', 'equalto', 'absent') | list }}
 
 - name: "Show _mariadb_hosts_patch, _mariadb_users"
   ansible.builtin.debug:
@@ -21,7 +33,7 @@
   community.mysql.mysql_user:
     name: "{{ item.0.name }}"
     host: "{{ item.1 }}"
-    password: "{{ item.0.password }}"
+    password: "{{ item.0.password | d(omit) }}"
     priv: "{{ item.0.priv | d('*.*:USAGE') }}"
     state: "{{ item.0.state | d('present') }}"
     append_privs: "{{ item.0.append_privs | d('no') }}"
@@ -33,8 +45,44 @@
       if _mariadb_root_login_password | length > 0 else omit }}
     config_file: /dev/null
   register: _mariadb_user_mgmt_
-  loop: "{{ _mariadb_users | d([]) | subelements('hosts', skip_missing=true) }}"
+  loop: "{{ _mariadb_users_present | d([]) | subelements('hosts', skip_missing=true) }}"
   no_log: "{{ not mariadb_debug }}"
+
+- name: Lookup existing hosts for absent users
+  community.mysql.mysql_query:
+    login_db: "mysql"
+    login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: >-
+      {{ _mariadb_root_login_password
+      if _mariadb_root_login_password | length > 0 else omit }}
+    config_file: /dev/null
+    query: "SELECT Host FROM mysql.user WHERE User = %s"
+    positional_args:
+      - "{{ item.name }}"
+  register: _mariadb_absent_hosts
+  loop: "{{ _mariadb_users_absent | d([]) }}"
+  no_log: "{{ not mariadb_debug }}"
+  when: _mariadb_users_absent | length > 0
+
+- name: Remove MariaDB users (absent)
+  community.mysql.mysql_user:
+    name: "{{ item.0.item.name }}"
+    host: "{{ item.1.Host }}"
+    state: absent
+    login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: >-
+      {{ _mariadb_root_login_password
+      if _mariadb_root_login_password | length > 0 else omit }}
+    config_file: /dev/null
+  loop: >-
+    {{ _mariadb_absent_hosts.results
+    | selectattr('query_result', 'defined')
+    | list
+    | subelements('query_result.0') }}
+  no_log: "{{ not mariadb_debug }}"
+  when: _mariadb_users_absent | length > 0
 
 - name: Copy my.cnf file for users
   ansible.builtin.template:
