@@ -16,9 +16,10 @@
 - name: Normalize MariaDB users with default state
   ansible.builtin.set_fact:
     _mariadb_users_normalized: >-
-      {{ _mariadb_users | d([])
-      | map('combine', {'state': 'present'})
-      | list }}
+      {{ (_mariadb_users_normalized | d([])) + [
+        item | combine({'state': (item.state | d('present'))})
+      ] }}
+  loop: "{{ _mariadb_users | d([]) }}"
 
 - name: Split MariaDB users by state
   ansible.builtin.set_fact:
