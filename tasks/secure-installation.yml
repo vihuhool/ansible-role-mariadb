@@ -4,7 +4,43 @@
     name: "{{ _mariadb_daemon }}"
     state: started
 
-- name: Check root login with provided password
+- name: Set default root login password fact
+  ansible.builtin.set_fact:
+    _mariadb_root_login_password: ""
+
+- name: Check root login with current admin password
+  community.mysql.mysql_query:
+    login_db: "mysql"
+    login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: "{{ mariadb_admin_login_password }}"
+    config_file: /dev/null
+    query: "SELECT 1"
+  register: _mariadb_root_login_check
+  changed_when: false
+  ignore_errors: true
+  when: mariadb_admin_login_password | length > 0
+
+- name: Fail if current admin password is invalid
+  ansible.builtin.fail:
+    msg: >-
+      Unable to connect as {{ mariadb_admin_user }} with
+      mariadb_admin_login_password. Provide the correct current password
+      or remove mariadb_admin_login_password to try other methods.
+  when:
+    - mariadb_admin_login_password | length > 0
+    - _mariadb_root_login_check is defined
+    - _mariadb_root_login_check.failed
+
+- name: Set root login password fact (current password)
+  ansible.builtin.set_fact:
+    _mariadb_root_login_password: "{{ mariadb_admin_login_password }}"
+  when:
+    - mariadb_admin_login_password | length > 0
+    - _mariadb_root_login_check is defined
+    - not _mariadb_root_login_check.failed
+
+- name: Check root login with desired password
   community.mysql.mysql_query:
     login_db: "mysql"
     login_unix_socket: "{{ _mariadb_socket }}"
@@ -12,29 +48,46 @@
     login_password: "{{ mariadb_admin_password }}"
     config_file: /dev/null
     query: "SELECT 1"
-  register: _mariadb_root_login_check
+  register: _mariadb_root_login_check_new
   changed_when: false
   ignore_errors: true
-  when: mariadb_admin_password | length > 0
+  when:
+    - mariadb_admin_login_password | length == 0
+    - mariadb_admin_password | length > 0
 
-- name: Set root login password fact (password works)
+- name: Set root login password fact (desired password works)
   ansible.builtin.set_fact:
     _mariadb_root_login_password: "{{ mariadb_admin_password }}"
   when:
+    - mariadb_admin_login_password | length == 0
     - mariadb_admin_password | length > 0
-    - not _mariadb_root_login_check.failed
+    - _mariadb_root_login_check_new is defined
+    - not _mariadb_root_login_check_new.failed
 
-- name: Set root login password fact (empty password)
-  ansible.builtin.set_fact:
-    _mariadb_root_login_password: ""
+- name: Check root login without password
+  community.mysql.mysql_query:
+    login_db: "mysql"
+    login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    config_file: /dev/null
+    query: "SELECT 1"
+  register: _mariadb_root_login_check_empty
+  changed_when: false
+  ignore_errors: true
   when:
-    - mariadb_admin_password | length > 0
-    - _mariadb_root_login_check.failed
+    - mariadb_admin_login_password | length == 0
+    - _mariadb_root_login_password | length == 0
 
-- name: Set root login password fact (no password provided)
-  ansible.builtin.set_fact:
-    _mariadb_root_login_password: ""
-  when: mariadb_admin_password | length == 0
+- name: Fail if unable to connect as admin
+  ansible.builtin.fail:
+    msg: >-
+      Unable to connect as {{ mariadb_admin_user }}. Set
+      mariadb_admin_login_password to the current password or fix access.
+  when:
+    - mariadb_admin_login_password | length == 0
+    - _mariadb_root_login_password | length == 0
+    - _mariadb_root_login_check_empty is defined
+    - _mariadb_root_login_check_empty.failed
 
 - name: Get list of hosts for the anonymous user.
   community.mysql.mysql_query:
