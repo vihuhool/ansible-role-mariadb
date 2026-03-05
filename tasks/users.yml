@@ -27,6 +27,11 @@
     append_privs: "{{ item.0.append_privs | d('no') }}"
     encrypted: "{{ item.0.encrypted | d('no') }}"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: >-
+      {{ _mariadb_root_login_password
+      if _mariadb_root_login_password | length > 0 else omit }}
+    config_file: /dev/null
   register: _mariadb_user_mgmt_
   loop: "{{ _mariadb_users | d([]) | subelements('hosts', skip_missing=true) }}"
   no_log: "{{ not mariadb_debug }}"
