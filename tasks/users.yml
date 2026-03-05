@@ -13,12 +13,15 @@
   ansible.builtin.set_fact:
     _mariadb_users: "{{ [mariadb_users, _mariadb_hosts_patch | d([])] | community.general.lists_mergeby('name', recursive=true, list_merge='keep') }}"
 
-- name: Split MariaDB users by state
+- name: Normalize MariaDB users with default state
   ansible.builtin.set_fact:
     _mariadb_users_normalized: >-
       {{ _mariadb_users | d([])
       | map('combine', {'state': 'present'})
       | list }}
+
+- name: Split MariaDB users by state
+  ansible.builtin.set_fact:
     _mariadb_users_present: >-
       {{ _mariadb_users_normalized
       | rejectattr('state', 'equalto', 'absent') | list }}
