@@ -4,10 +4,45 @@
     name: "{{ _mariadb_daemon }}"
     state: started
 
+- name: Check root login with provided password
+  community.mysql.mysql_query:
+    login_db: "mysql"
+    login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: "{{ mariadb_admin_password }}"
+    config_file: /dev/null
+    query: "SELECT 1"
+  register: _mariadb_root_login_check
+  changed_when: false
+  failed_when: false
+  when: mariadb_admin_password | length > 0
+
+- name: Set root login password fact (password works)
+  ansible.builtin.set_fact:
+    _mariadb_root_login_password: "{{ mariadb_admin_password }}"
+  when:
+    - mariadb_admin_password | length > 0
+    - not _mariadb_root_login_check.failed
+
+- name: Set root login password fact (empty password)
+  ansible.builtin.set_fact:
+    _mariadb_root_login_password: ""
+  when:
+    - mariadb_admin_password | length > 0
+    - _mariadb_root_login_check.failed
+
+- name: Set root login password fact (no password provided)
+  ansible.builtin.set_fact:
+    _mariadb_root_login_password: ""
+  when: mariadb_admin_password | length == 0
+
 - name: Get list of hosts for the anonymous user.
   community.mysql.mysql_query:
     login_db: "mysql"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: "{{ _mariadb_root_login_password }}"
+    config_file: /dev/null
     query: SELECT Host FROM mysql.user WHERE User = %s
     positional_args:
       - ''
@@ -17,6 +52,9 @@
   community.mysql.mysql_query:
     login_db: "mysql"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: "{{ _mariadb_root_login_password }}"
+    config_file: /dev/null
     query: DELETE FROM mysql.user WHERE User=%s AND Host=%s
     positional_args:
       - ''
@@ -30,6 +68,9 @@
   community.mysql.mysql_query:
     login_db: "mysql"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: "{{ _mariadb_root_login_password }}"
+    config_file: /dev/null
     query: SELECT Host FROM mysql.user WHERE User = %s ORDER BY (Host='localhost') ASC
     positional_args:
       - "{{ mariadb_admin_user }}"
@@ -39,6 +80,9 @@
   community.mysql.mysql_user:
     name: "{{ mariadb_admin_user }}"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: "{{ _mariadb_root_login_password }}"
+    config_file: /dev/null
     host: "{{ item.Host }}"
     priv: "*.*:ALL,GRANT"
     state: absent
@@ -50,6 +94,9 @@
     name: "{{ mariadb_admin_user }}"
     password: "{{ mariadb_admin_password }}"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ mariadb_admin_user }}"
+    login_password: "{{ _mariadb_root_login_password }}"
+    config_file: /dev/null
     host: "localhost"
   register: _mariadb_root_password_update
   when:
