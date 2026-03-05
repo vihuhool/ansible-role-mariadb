@@ -130,8 +130,16 @@
 - name: "Flush handlers"
   ansible.builtin.meta: flush_handlers
 
-- name: "Wait for MariaDB to be started"
+- name: "Wait for MariaDB socket to be available"
+  ansible.builtin.wait_for:
+    path: "{{ _mariadb_socket }}"
+    delay: 3
+    timeout: 300
+  when: _mariadb_socket is defined and _mariadb_socket | length > 0
+
+- name: "Wait for MariaDB TCP port to be available"
   ansible.builtin.wait_for:
     port: "{{ mariadb_port }}"
     delay: 3
     timeout: 300
+  when: _mariadb_socket is not defined or _mariadb_socket | length == 0
