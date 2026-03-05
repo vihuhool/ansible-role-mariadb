@@ -167,6 +167,14 @@
     - _mariadb_root_hosts.rowcount[0] != 0
     - mariadb_admin_force_password_update
 
+- name: Update root login password fact after rotation
+  ansible.builtin.set_fact:
+    _mariadb_root_login_password: "{{ mariadb_admin_password }}"
+  when:
+    - mariadb_admin_password | length > 0
+    - _mariadb_root_password_update is defined
+    - not _mariadb_root_password_update.skipped | default(false)
+
 - name: Output results of updating mysql root password
   ansible.builtin.debug:
     var: _mariadb_root_password_update
