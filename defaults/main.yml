@@ -102,6 +102,8 @@ mariadb_datadir: "/var/lib/mysql"
 mariadb_pid_file: null
 # OS: The socket used by mariadb service
 mariadb_socket: null
+# Force TCP login for admin checks (useful when socket auth blocks login)
+mariadb_force_tcp_login: false
 # OS: Existing directory that will hold mariadb main configuration file
 mariadb_config_datadir: null
 # OS: Directory that holds all the log files

@@ -8,20 +8,11 @@
   ansible.builtin.set_fact:
     _mariadb_root_login_password: ""
 
-- name: Set MariaDB admin connection parameters (socket)
+- name: Set MariaDB admin connection parameters
   ansible.builtin.set_fact:
     _mariadb_login_socket: "{{ _mariadb_socket }}"
-  when:
-    - mariadb_admin_login_password | length == 0
-    - mariadb_admin_password | length == 0
-
-- name: Set MariaDB admin connection parameters (tcp)
-  ansible.builtin.set_fact:
-    _mariadb_login_host: "127.0.0.1"
-  when:
-    - >-
-        (mariadb_admin_login_password | length > 0) or
-        (mariadb_admin_password | length > 0)
+    _mariadb_login_host: >-
+      {{ "127.0.0.1" if mariadb_force_tcp_login | default(false) else omit }}
 
 - name: Check root login with current admin password
   community.mysql.mysql_query:
