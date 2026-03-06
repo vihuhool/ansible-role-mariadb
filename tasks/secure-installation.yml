@@ -8,10 +8,24 @@
   ansible.builtin.set_fact:
     _mariadb_root_login_password: ""
 
+- name: Set MariaDB admin connection parameters
+  ansible.builtin.set_fact:
+    _mariadb_login_socket: >-
+      {{ _mariadb_socket
+      if (mariadb_admin_login_password | length == 0
+      and mariadb_admin_password | length == 0)
+      else omit }}
+    _mariadb_login_host: >-
+      {{ '127.0.0.1'
+      if (mariadb_admin_login_password | length > 0
+      or mariadb_admin_password | length > 0)
+      else omit }}
+
 - name: Check root login with current admin password
   community.mysql.mysql_query:
     login_db: "mysql"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: "{{ mariadb_admin_login_password }}"
     config_file: /dev/null
@@ -43,7 +57,8 @@
 - name: Check root login with desired password
   community.mysql.mysql_query:
     login_db: "mysql"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: "{{ mariadb_admin_password }}"
     config_file: /dev/null
@@ -67,7 +82,8 @@
 - name: Check root login without password
   community.mysql.mysql_query:
     login_db: "mysql"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     config_file: /dev/null
     query: "SELECT 1"
@@ -92,7 +108,8 @@
 - name: Get list of hosts for the anonymous user.
   community.mysql.mysql_query:
     login_db: "mysql"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
@@ -106,7 +123,8 @@
 - name: Remove anonymous MariaDB users.
   community.mysql.mysql_query:
     login_db: "mysql"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
@@ -124,7 +142,8 @@
 - name: Get list of hosts for the root user.
   community.mysql.mysql_query:
     login_db: "mysql"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
@@ -138,7 +157,8 @@
 - name: Disallow root login remotely
   community.mysql.mysql_user:
     name: "{{ mariadb_admin_user }}"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
@@ -154,7 +174,8 @@
   community.mysql.mysql_user:
     name: "{{ mariadb_admin_user }}"
     password: "{{ mariadb_admin_password }}"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
@@ -183,7 +204,8 @@
 - name: Check root auth plugin
   community.mysql.mysql_query:
     login_db: "mysql"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
@@ -209,7 +231,8 @@
 - name: Disable unix_socket auth for root
   community.mysql.mysql_query:
     login_db: "mysql"
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
@@ -248,7 +271,8 @@
     password: "{{ mariadb_admin_create_user_password }}"
     priv: "{{ mariadb_admin_create_user_priv }}"
     state: present
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
@@ -262,7 +286,8 @@
   community.mysql.mysql_db:
     name: test
     state: absent
-    login_unix_socket: "{{ _mariadb_socket }}"
+    login_unix_socket: "{{ _mariadb_login_socket }}"
+    login_host: "{{ _mariadb_login_host }}"
     login_user: "{{ mariadb_admin_user }}"
     login_password: >-
       {{ _mariadb_root_login_password
