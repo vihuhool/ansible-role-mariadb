@@ -41,19 +41,6 @@ mariadb_admin_home: '/root'
 mariadb_admin_user: 'root'
 # Mariadb admin user password
 mariadb_admin_password: ''
-# Optional current password for admin user (used for password rotation)
-mariadb_admin_login_password: ''
-# Create /root/.my.cnf with admin credentials
-mariadb_admin_create_mycnf: false
-# Remove /root/.my.cnf when not creating it
-mariadb_admin_remove_mycnf: true
-
-# Create a dedicated admin user (non-root)
-mariadb_admin_create_user: true
-mariadb_admin_create_user_name: "db_admin"
-mariadb_admin_create_user_password: ""
-mariadb_admin_create_user_host: "localhost"
-mariadb_admin_create_user_priv: "*.*:ALL,GRANT"
 # Update the admin password ?
 mariadb_admin_force_password_update: true
 
@@ -102,17 +89,6 @@ mariadb_datadir: "/var/lib/mysql"
 mariadb_pid_file: null
 # OS: The socket used by mariadb service
 mariadb_socket: null
-# Candidate socket paths to auto-detect when mariadb_socket is not set
-mariadb_socket_candidates:
-  - /var/lib/mysql/mysql.sock
-  - /run/mysqld/mysqld.sock
-  - /var/run/mysqld/mysqld.sock
-  - /run/mariadb/mariadb.sock
-  - /var/run/mariadb/mariadb.sock
-  - /run/mysql/mysql.sock
-  - /var/run/mysql/mysql.sock
-# Force TCP login for admin checks (useful when socket auth blocks login)
-mariadb_force_tcp_login: false
 # OS: Existing directory that will hold mariadb main configuration file
 mariadb_config_datadir: null
 # OS: Directory that holds all the log files
@@ -245,9 +221,6 @@ mariadb_systemd_override:
     options:
       LimitNOFILE: 100000
       LimitMEMLOCK: 100000
-
-# Disable unix_socket authentication for root (if enabled by the distro)
-mariadb_disable_unix_socket_auth: false
 
 
 # Backup related variables (using the script automysqlbackup from https://sourceforge.net/projects/automysqlbackup/)

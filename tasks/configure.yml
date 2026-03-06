@@ -110,14 +110,6 @@
       when: mariadb_debug
 
 - name: "Set systemd settings for Mariadb"
-  ansible.builtin.file:
-    path: "{{ mariadb_systemd_override_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-
-- name: "Set systemd settings for Mariadb"
   ansible.builtin.template:
     src: "etc/systemd/system/mariadb.service.d/override.conf.j2"
     dest: "{{ mariadb_systemd_override_dir }}/{{ item.filename }}"
@@ -130,16 +122,8 @@
 - name: "Flush handlers"
   ansible.builtin.meta: flush_handlers
 
-- name: "Wait for MariaDB socket to be available"
-  ansible.builtin.wait_for:
-    path: "{{ _mariadb_socket }}"
-    delay: 3
-    timeout: 300
-  when: _mariadb_socket is defined and _mariadb_socket | length > 0
-
-- name: "Wait for MariaDB TCP port to be available"
+- name: "Wait for MariaDB to be started"
   ansible.builtin.wait_for:
     port: "{{ mariadb_port }}"
     delay: 3
     timeout: 300
-  when: _mariadb_socket is not defined or _mariadb_socket | length == 0

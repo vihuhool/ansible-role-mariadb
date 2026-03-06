@@ -1,6 +1,6 @@
 galaxy_info:
   role_name: "mariadb"
-  namespace: "vihuhool"
+  namespace: "claranet"
   description: "Install and configure MariaDB server"
   author: "Claranet"
   company: "Claranet France"
