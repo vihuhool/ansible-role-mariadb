@@ -45,6 +45,21 @@
   ignore_errors: true
   when: mariadb_admin_login_password | length > 0
 
+- name: Check root login without password (socket fallback)
+  community.mysql.mysql_query:
+    login_db: "mysql"
+    login_unix_socket: "{{ _mariadb_login_socket | default(_mariadb_socket) }}"
+    login_user: "{{ mariadb_admin_user }}"
+    config_file: /dev/null
+    query: "SELECT 1"
+  register: _mariadb_root_login_check_fallback
+  changed_when: false
+  ignore_errors: true
+  when:
+    - mariadb_admin_login_password | length > 0
+    - _mariadb_root_login_check is defined
+    - _mariadb_root_login_check.failed
+
 - name: Fail if current admin password is invalid
   ansible.builtin.fail:
     msg: >-
@@ -55,6 +70,18 @@
     - mariadb_admin_login_password | length > 0
     - _mariadb_root_login_check is defined
     - _mariadb_root_login_check.failed
+    - _mariadb_root_login_check_fallback is defined
+    - _mariadb_root_login_check_fallback.failed
+
+- name: Set root login password fact (socket fallback)
+  ansible.builtin.set_fact:
+    _mariadb_root_login_password: ""
+  when:
+    - mariadb_admin_login_password | length > 0
+    - _mariadb_root_login_check is defined
+    - _mariadb_root_login_check.failed
+    - _mariadb_root_login_check_fallback is defined
+    - not _mariadb_root_login_check_fallback.failed
 
 - name: Set root login password fact (current password)
   ansible.builtin.set_fact:
