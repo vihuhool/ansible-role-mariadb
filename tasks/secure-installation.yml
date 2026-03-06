@@ -60,6 +60,37 @@
     - _mariadb_root_login_check is defined
     - _mariadb_root_login_check.failed
 
+- name: Sync root password via admin fallback
+  community.mysql.mysql_query:
+    login_db: "mysql"
+    login_unix_socket: "{{ _mariadb_login_socket | default(omit) }}"
+    login_host: "{{ _mariadb_login_host | default(omit) }}"
+    login_user: "{{ mariadb_admin_create_user_name }}"
+    login_password: "{{ mariadb_admin_create_user_password }}"
+    config_file: /dev/null
+    query: >-
+      ALTER USER '{{ mariadb_admin_user }}'@'localhost'
+      IDENTIFIED BY '{{ mariadb_admin_password | replace("'", "''") }}';
+  register: _mariadb_root_password_sync
+  changed_when: false
+  ignore_errors: true
+  when:
+    - mariadb_admin_login_password | length > 0
+    - _mariadb_root_login_check is defined
+    - _mariadb_root_login_check.failed
+    - _mariadb_root_login_check_fallback is defined
+    - _mariadb_root_login_check_fallback.failed
+    - mariadb_admin_create_user | bool
+    - mariadb_admin_create_user_name | length > 0
+    - mariadb_admin_create_user_password | length > 0
+
+- name: Set root login password fact (sync)
+  ansible.builtin.set_fact:
+    _mariadb_root_login_password: "{{ mariadb_admin_password }}"
+  when:
+    - _mariadb_root_password_sync is defined
+    - not _mariadb_root_password_sync.failed
+
 - name: Fail if current admin password is invalid
   ansible.builtin.fail:
     msg: >-
@@ -72,6 +103,8 @@
     - _mariadb_root_login_check.failed
     - _mariadb_root_login_check_fallback is defined
     - _mariadb_root_login_check_fallback.failed
+    - _mariadb_root_password_sync is not defined or
+      _mariadb_root_password_sync.failed
 
 - name: Set root login password fact (socket fallback)
   ansible.builtin.set_fact:
