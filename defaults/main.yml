@@ -102,6 +102,15 @@ mariadb_datadir: "/var/lib/mysql"
 mariadb_pid_file: null
 # OS: The socket used by mariadb service
 mariadb_socket: null
+# Candidate socket paths to auto-detect when mariadb_socket is not set
+mariadb_socket_candidates:
+  - /var/lib/mysql/mysql.sock
+  - /run/mysqld/mysqld.sock
+  - /var/run/mysqld/mysqld.sock
+  - /run/mariadb/mariadb.sock
+  - /var/run/mariadb/mariadb.sock
+  - /run/mysql/mysql.sock
+  - /var/run/mysql/mysql.sock
 # Force TCP login for admin checks (useful when socket auth blocks login)
 mariadb_force_tcp_login: false
 # OS: Existing directory that will hold mariadb main configuration file

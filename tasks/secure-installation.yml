@@ -4,6 +4,23 @@
     name: "{{ _mariadb_daemon }}"
     state: started
 
+- name: Detect MariaDB socket path
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ ([_mariadb_socket] + mariadb_socket_candidates) | unique }}"
+  register: _mariadb_socket_stats
+
+- name: Set MariaDB socket from detected path
+  ansible.builtin.set_fact:
+    _mariadb_socket: >-
+      {{ (_mariadb_socket_stats.results
+          | selectattr('stat.exists')
+          | map(attribute='item')
+          | list
+          | first)
+         | default(_mariadb_socket, true) }}
+  when: _mariadb_socket_stats is defined
+
 - name: Set default root login password fact
   ansible.builtin.set_fact:
     _mariadb_root_login_password: ""
