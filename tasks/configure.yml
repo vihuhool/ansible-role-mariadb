@@ -131,8 +131,25 @@
 - name: "Flush handlers"
   ansible.builtin.meta: flush_handlers
 
-- name: "Wait for MariaDB to be started"
+- name: "Wait for MariaDB socket to be available"
+  ansible.builtin.wait_for:
+    path: "{{ _mariadb_socket }}"
+    state: present
+    delay: 3
+    timeout: 300
+
+- name: "Detect skip-networking in MariaDB config"
+  ansible.builtin.shell: >
+    grep -R -E '^[[:space:]]*skip-networking' /etc/my.cnf /etc/my.cnf.d/*.cnf
+  register: _mariadb_skip_networking
+  changed_when: false
+  failed_when: false
+
+- name: "Wait for MariaDB TCP port to be available"
   ansible.builtin.wait_for:
     port: "{{ mariadb_port }}"
     delay: 3
     timeout: 300
+  when:
+    - mariadb_port | int > 0
+    - _mariadb_skip_networking.rc != 0
