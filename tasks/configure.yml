@@ -109,6 +109,15 @@
         var: _mariadb_set_err_log_file_perms
       when: mariadb_debug
 
+- name: "Ensure systemd override directory exists"
+  ansible.builtin.file:
+    path: "{{ mariadb_systemd_override_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  when: _mariadb_systemd_override | length > 0
+
 - name: "Set systemd settings for Mariadb"
   ansible.builtin.template:
     src: "etc/systemd/system/mariadb.service.d/override.conf.j2"
