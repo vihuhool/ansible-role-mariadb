@@ -17,6 +17,10 @@
   community.mysql.mysql_query:
     login_db: "mysql"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
     query: SELECT Host FROM mysql.user WHERE User = %s
     positional_args:
       - ''
@@ -26,6 +30,10 @@
   community.mysql.mysql_query:
     login_db: "mysql"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
     query: DELETE FROM mysql.user WHERE User=%s AND Host=%s
     positional_args:
       - ''
@@ -39,6 +47,10 @@
   community.mysql.mysql_query:
     login_db: "mysql"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
     query: SELECT Host FROM mysql.user WHERE User = %s ORDER BY (Host='localhost') ASC
     positional_args:
       - "{{ mariadb_admin_user }}"
@@ -48,6 +60,10 @@
   community.mysql.mysql_user:
     name: "{{ mariadb_admin_user }}"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
     host: "{{ item.Host }}"
     priv: "*.*:ALL,GRANT"
     state: absent
@@ -59,6 +75,10 @@
     name: "{{ mariadb_admin_user }}"
     password: "{{ mariadb_admin_password }}"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
     host: "localhost"
   register: _mariadb_root_password_update
   when:
@@ -76,3 +96,7 @@
     name: test
     state: absent
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}

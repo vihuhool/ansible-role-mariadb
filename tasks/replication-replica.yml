@@ -8,6 +8,10 @@
   community.mysql.mysql_replication:
     mode: getreplica
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
   ignore_errors: true
   register: _mariadb_replica
   # tags: ['skip_ansible_galaxy']
@@ -21,6 +25,10 @@
   community.mysql.mysql_replication:
     mode: getprimary
     login_unix_socket: "{{ mariadb_replication_primary_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
   delegate_to: "{{ mariadb_replication_primary_inventory_host | d(omit, true) }}"
   register: _mariadb_primary
   when:
@@ -35,6 +43,10 @@
     primary_log_file: "{{ _mariadb_primary.File }}"
     primary_log_pos: "{{ _mariadb_primary.Position }}"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
   failed_when: false
   when:
     - (_mariadb_replica.Is_Replica is defined and not _mariadb_replica.Is_Replica) or (_mariadb_replica.Is_Replica is not defined and _mariadb_replica is failed)
@@ -44,6 +56,10 @@
   community.mysql.mysql_replication:
     mode: getreplica
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
   ignore_errors: true
   register: _mariadb_replica
 
@@ -56,6 +72,10 @@
   community.mysql.mysql_replication:
     mode: startreplica
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
   when:
     - (_mariadb_replica.Is_Replica is defined and _mariadb_replica.Is_Replica) or (_mariadb_replica.Is_Replica is not defined and _mariadb_replica is failed)
     - not (_mariadb_replica.Slave_IO_Running | bool) or not (_mariadb_replica.Slave_SQL_Running | bool)

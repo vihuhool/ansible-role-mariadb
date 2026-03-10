@@ -7,6 +7,10 @@
     state: "{{ item.state | d('present') }}"
     target: "{{ item.target | d(omit) }}"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
   no_log: "{{ not mariadb_debug }}"
   register: _mariadb_databases_mgmt_res
   loop: "{{ mariadb_databases }}"

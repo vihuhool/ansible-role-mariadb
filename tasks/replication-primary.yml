@@ -13,6 +13,10 @@
     priv: "{{ mariadb_replication_priv }}"
     append_privs: "no"
     login_unix_socket: "{{ _mariadb_socket }}"
+    login_user: "{{ _mariadb_login_user }}"
+    login_password: >-
+      {{ _mariadb_login_password
+      if _mariadb_login_password | length > 0 else omit }}
     state: present
   loop: "{{ mariadb_replication_hosts }}"
   tags: skip_ansible_galaxy
